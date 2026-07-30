@@ -344,3 +344,33 @@ COPY runner_generic.py .
 
 RUN python3 decompile_revng.py --version
 ENTRYPOINT [ "./entrypoint.sh", "decompile_revng.py" ]
+
+# Kuna
+FROM base AS kuna
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl git build-essential \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain stable -y
+
+# Install Kuna
+RUN cd / \
+    && . "$HOME/.cargo/env" \
+    && git clone https://github.com/Noelo-Lab/kuna kuna-build \
+    && cd /kuna-build \
+    && make \
+    && mkdir /kuna \
+    && cp decompiler/target/release/kuna /kuna \
+    && cp -R specs /kuna \
+    && cd / \
+    && rm -rf /kuna-build
+
+USER decompiler_user
+WORKDIR /home/decompiler_user
+COPY decompile_kuna.py .
+
+COPY entrypoint.sh .
+COPY runner_generic.py .
+
+RUN python3 decompile_kuna.py --version
+ENTRYPOINT [ "./entrypoint.sh", "decompile_kuna.py" ]

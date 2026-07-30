@@ -41,6 +41,8 @@ services:
         <<: *default-decompiler-options
     revng:
         <<: *default-decompiler-options
+    kuna:
+        <<: *default-decompiler-options
 
 
 secrets:

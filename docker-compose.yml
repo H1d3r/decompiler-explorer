@@ -224,6 +224,13 @@ services:
             context: runners/decompiler
             target: revng
 
+    kuna:
+        <<: *default-decompiler-options
+        image: ${IMAGE_NAME:-decompiler_explorer}:kuna
+        build:
+            context: runners/decompiler
+            target: kuna
+
 networks:
     backend_net:
 
