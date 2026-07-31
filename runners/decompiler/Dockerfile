@@ -165,20 +165,35 @@ FROM base-x86 AS reko
 USER root
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git build-essential cmake wget gcc g++ libcapstone-dev pkg-config p7zip-full unzip \
-    && wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
+    && wget https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
     && dpkg -i packages-microsoft-prod.deb \
     && rm packages-microsoft-prod.deb \
     && apt-get update \
     && apt-get install -y apt-transport-https \
     && apt-get update \
-    && apt-get install -y dotnet-sdk-6.0 \
+    && apt-get install -y dotnet-runtime-8.0 dotnet-sdk-9.0 \
     && rm -rf /var/lib/apt/lists/*
+# Need .NET 9.0 SDK to build and .NET 8.0 Runtime to run
 
 USER decompiler_user
 WORKDIR /home/decompiler_user
-RUN git clone --depth=1 --branch=version-0.11.6 https://github.com/uxmal/reko.git \
+# Need to build only the CmdLine and Runtime targets from the solution
+# but there are no dedicated targets in BuildTargets.csproj
+RUN git clone --depth=1 --branch=version-0.12.4 https://github.com/uxmal/reko.git \
     && cd reko \
-    && dotnet msbuild -p:Platform=x64 -p:Configuration=UnixRelease -t:build_solution -m ./src/BuildTargets/BuildTargets.csproj \
+    && printf '%s\n' \
+            '{' \
+            '  "solution": {' \
+            '    "path": "Reko-decompiler.slnx",' \
+            '    "projects": [' \
+            '      "Drivers\\CmdLine\\CmdLine.csproj",' \
+            '      "Installers\\Runtime\\Runtime.csproj"' \
+            '    ]' \
+            '  }' \
+            '}' \
+            > src/Reko-CmdLine.slnf \
+    && dotnet build ./src/tools/c2xml/c2xml.csproj -c Release -v:m -m:1 \
+    && dotnet build ./src/Reko-CmdLine.slnf -c UnixRelease -p:Platform=x64 -v:m -m \
     && dotnet msbuild -p:Platform=x64 -p:Configuration=Release -t:create_runtime_nupkg -m ./src/BuildTargets/BuildTargets.csproj \
     && dotnet msbuild -p:Platform=x64 -p:Configuration=Release -t:create_release -m ./src/BuildTargets/BuildTargets.csproj \
     && cp bin/CmdLine*.zip ../CmdLine.zip \

@@ -195,6 +195,16 @@ services:
         build:
             context: runners/decompiler
             target: reko
+        deploy:
+            resources:
+                limits:
+                    memory: ${DECOMPILER_MEM_LIMIT_HARD:-10g}
+        command: [
+            "--timeout", "${DECOMPILER_TIMEOUT:-120}",
+            "--extended-timeout", "${DECOMPILER_EXTENDED_TIMEOUT:-900}",
+            # Reko is ornery and doesn't handle resource limits
+            # via python RLIMIT_AS, so use deploy limits
+        ]
 
     hexrays:
         <<: *default-decompiler-options
